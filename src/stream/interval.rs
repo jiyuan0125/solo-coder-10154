@@ -1,10 +1,10 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::stream::Stream;
-use crate::utils::{timer_after, Timer};
+use crate::utils::{timer_at, Timer};
 
 /// Creates a new stream that yields at a set interval.
 ///
@@ -44,9 +44,14 @@ use crate::utils::{timer_after, Timer};
 #[cfg(feature = "unstable")]
 #[cfg_attr(feature = "docs", doc(cfg(unstable)))]
 pub fn interval(dur: Duration) -> Interval {
+    let start = Instant::now();
+    let tick_count = 0u64;
+    let deadline = next_deadline(start, dur, tick_count + 1);
     Interval {
-        delay: timer_after(dur),
+        delay: timer_at(deadline),
         interval: dur,
+        start,
+        tick_count,
     }
 }
 
@@ -62,6 +67,42 @@ pub fn interval(dur: Duration) -> Interval {
 pub struct Interval {
     delay: Timer,
     interval: Duration,
+    start: Instant,
+    tick_count: u64,
+}
+
+#[inline]
+fn mul_by_2_pow_32(d: Duration) -> Option<Duration> {
+    let mut result = d;
+    for _ in 0..32 {
+        result = result.checked_add(result)?;
+    }
+    Some(result)
+}
+
+#[inline]
+fn checked_mul_duration(interval: Duration, n: u64) -> Option<Duration> {
+    if n == 0 {
+        return Some(Duration::ZERO);
+    }
+    if n <= u32::MAX as u64 {
+        return interval.checked_mul(n as u32);
+    }
+    let high = (n >> 32) as u32;
+    let low = n as u32;
+    let part_high = mul_by_2_pow_32(interval.checked_mul(high)?)?;
+    let part_low = interval.checked_mul(low)?;
+    part_high.checked_add(part_low)
+}
+
+#[inline]
+fn next_deadline(start: Instant, interval: Duration, n: u64) -> Instant {
+    if let Some(multiplied) = checked_mul_duration(interval, n) {
+        if let Some(deadline) = start.checked_add(multiplied) {
+            return deadline;
+        }
+    }
+    Instant::now() + Duration::from_secs(86400 * 365 * 100)
 }
 
 impl Stream for Interval {
@@ -71,8 +112,9 @@ impl Stream for Interval {
         if Pin::new(&mut self.delay).poll(cx).is_pending() {
             return Poll::Pending;
         }
-        let interval = self.interval;
-        let _ = std::mem::replace(&mut self.delay, timer_after(interval));
+        self.tick_count += 1;
+        let deadline = next_deadline(self.start, self.interval, self.tick_count + 1);
+        let _ = std::mem::replace(&mut self.delay, timer_at(deadline));
         Poll::Ready(Some(()))
     }
 }

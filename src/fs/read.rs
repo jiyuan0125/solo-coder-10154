@@ -41,4 +41,5 @@ pub async fn read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
         std::fs::read(&path).context(|| format!("could not read file `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

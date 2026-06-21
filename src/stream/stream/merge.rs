@@ -6,7 +6,21 @@ use pin_project_lite::pin_project;
 use crate::stream::stream::StreamExt;
 use crate::stream::Fuse;
 use crate::stream::Stream;
-use crate::utils;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Side {
+    Left,
+    Right,
+}
+
+impl Side {
+    fn flip(self) -> Side {
+        match self {
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+}
 
 pin_project! {
     /// A stream that merges two other streams into a single stream.
@@ -24,6 +38,9 @@ pin_project! {
         left: Fuse<L>,
         #[pin]
         right: Fuse<R>,
+        next_first: Side,
+        pending_side: Option<Side>,
+        consecutive_same_first: u8,
     }
 }
 
@@ -32,6 +49,9 @@ impl<L: Stream, R: Stream> Merge<L, R> {
         Self {
             left: left.fuse(),
             right: right.fuse(),
+            next_first: Side::Left,
+            pending_side: None,
+            consecutive_same_first: 0,
         }
     }
 }
@@ -45,29 +65,59 @@ where
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
-        if utils::random(2) == 0 {
-            poll_next_in_order(this.left, this.right, cx)
+
+        let first = if let Some(pending) = *this.pending_side {
+            pending.flip()
+        } else if *this.consecutive_same_first >= 5 {
+            this.next_first.flip()
         } else {
-            poll_next_in_order(this.right, this.left, cx)
+            *this.next_first
+        };
+
+        if first == *this.next_first {
+            *this.consecutive_same_first = this.consecutive_same_first.saturating_add(1);
+        } else {
+            *this.consecutive_same_first = 1;
+        }
+
+        match first {
+            Side::Left => {
+                poll_in_order(this.left, this.right, cx, this.pending_side, this.next_first, Side::Left, Side::Right)
+            }
+            Side::Right => {
+                poll_in_order(this.right, this.left, cx, this.pending_side, this.next_first, Side::Right, Side::Left)
+            }
         }
     }
 }
 
-fn poll_next_in_order<F, S, I>(
+fn poll_in_order<F, S, I>(
     first: Pin<&mut F>,
     second: Pin<&mut S>,
     cx: &mut Context<'_>,
+    pending_side: &mut Option<Side>,
+    next_first: &mut Side,
+    first_side: Side,
+    second_side: Side,
 ) -> Poll<Option<I>>
 where
     F: Stream<Item = I>,
     S: Stream<Item = I>,
 {
     match first.poll_next(cx) {
+        Poll::Ready(Some(item)) => {
+            *pending_side = None;
+            *next_first = second_side;
+            Poll::Ready(Some(item))
+        }
         Poll::Ready(None) => second.poll_next(cx),
-        Poll::Ready(item) => Poll::Ready(item),
         Poll::Pending => match second.poll_next(cx) {
+            Poll::Ready(Some(item)) => {
+                *pending_side = Some(first_side);
+                *next_first = second_side;
+                Poll::Ready(Some(item))
+            }
             Poll::Ready(None) | Poll::Pending => Poll::Pending,
-            Poll::Ready(item) => Poll::Ready(item),
         },
     }
 }

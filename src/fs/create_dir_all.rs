@@ -35,4 +35,5 @@ pub async fn create_dir_all<P: AsRef<Path>>(path: P) -> io::Result<()> {
             .context(|| format!("could not create directory path `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

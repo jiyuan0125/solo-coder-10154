@@ -23,7 +23,8 @@ use crate::task::{self, JoinHandle};
 /// task::spawn_blocking(|| {
 ///     println!("long-running task here");
 /// })
-/// .await;
+/// .await
+/// .expect("failed to spawn blocking task");
 /// #
 /// # })
 /// ```

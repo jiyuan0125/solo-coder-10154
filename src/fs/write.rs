@@ -39,4 +39,5 @@ pub async fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> io::
             .context(|| format!("could not write to file `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

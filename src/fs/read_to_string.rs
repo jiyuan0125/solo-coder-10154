@@ -43,4 +43,5 @@ pub async fn read_to_string<P: AsRef<Path>>(path: P) -> io::Result<String> {
             .context(|| format!("could not read file `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

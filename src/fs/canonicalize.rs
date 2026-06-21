@@ -39,4 +39,5 @@ pub async fn canonicalize<P: AsRef<Path>>(path: P) -> io::Result<PathBuf> {
             .context(|| format!("could not canonicalize `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

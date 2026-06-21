@@ -92,7 +92,7 @@ impl<I: Iterator<Item = SocketAddr>> Future for ToSocketAddrsFuture<I> {
 
         match state {
             ToSocketAddrsFuture::Resolving(mut task) => {
-                let poll = Pin::new(&mut task).poll(cx);
+                let poll = Pin::new(&mut task).poll(cx).map(|res| res.unwrap_or_else(|e| Err(e)));
                 if poll.is_pending() {
                     *this = ToSocketAddrsFuture::Resolving(task);
                 }

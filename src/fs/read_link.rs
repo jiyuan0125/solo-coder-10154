@@ -35,4 +35,5 @@ pub async fn read_link<P: AsRef<Path>>(path: P) -> io::Result<PathBuf> {
             .context(|| format!("could not read link `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

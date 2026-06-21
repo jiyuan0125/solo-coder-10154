@@ -26,7 +26,7 @@ use crate::task::spawn_blocking;
 pub async fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
     let src = src.as_ref().to_owned();
     let dst = dst.as_ref().to_owned();
-    spawn_blocking(move || std::os::windows::fs::symlink_dir(&src, &dst)).await
+    spawn_blocking(move || std::os::windows::fs::symlink_dir(&src, &dst)).await.unwrap_or_else(|e| Err(e))
 }
 
 /// Creates a new file symbolic link on the filesystem.
@@ -51,5 +51,5 @@ pub async fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::
 pub async fn symlink_file<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
     let src = src.as_ref().to_owned();
     let dst = dst.as_ref().to_owned();
-    spawn_blocking(move || std::os::windows::fs::symlink_file(&src, &dst)).await
+    spawn_blocking(move || std::os::windows::fs::symlink_file(&src, &dst)).await.unwrap_or_else(|e| Err(e))
 }

@@ -35,4 +35,5 @@ pub async fn remove_dir_all<P: AsRef<Path>>(path: P) -> io::Result<()> {
             .context(|| format!("could not remove directory `{}`", path.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }

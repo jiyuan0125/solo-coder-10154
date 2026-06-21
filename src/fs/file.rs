@@ -119,7 +119,8 @@ impl File {
         let file = spawn_blocking(move || {
             std::fs::File::open(&path).context(|| format!("could not open `{}`", path.display()))
         })
-        .await?;
+        .await
+        .unwrap_or_else(|e| Err(e))?;
         Ok(File::new(file, true))
     }
 
@@ -157,7 +158,8 @@ impl File {
         let file = spawn_blocking(move || {
             std::fs::File::create(&path)
         })
-        .await?;
+        .await
+        .unwrap_or_else(|e| Err(e))?;
         Ok(File::new(file, true))
     }
 
@@ -190,7 +192,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.sync_all()).await
+        spawn_blocking(move || state.file.sync_all()).await.unwrap_or_else(|e| Err(e))
     }
 
     /// Synchronizes OS-internal buffered contents to disk.
@@ -226,7 +228,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.sync_data()).await
+        spawn_blocking(move || state.file.sync_data()).await.unwrap_or_else(|e| Err(e))
     }
 
     /// Truncates or extends the file.
@@ -259,7 +261,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.set_len(size)).await
+        spawn_blocking(move || state.file.set_len(size)).await.unwrap_or_else(|e| Err(e))
     }
 
     /// Reads the file's metadata.
@@ -278,7 +280,7 @@ impl File {
     /// ```
     pub async fn metadata(&self) -> io::Result<Metadata> {
         let file = self.file.clone();
-        spawn_blocking(move || file.metadata()).await
+        spawn_blocking(move || file.metadata()).await.unwrap_or_else(|e| Err(e))
     }
 
     /// Changes the permissions on the file.
@@ -307,7 +309,7 @@ impl File {
     /// ```
     pub async fn set_permissions(&self, perm: Permissions) -> io::Result<()> {
         let file = self.file.clone();
-        spawn_blocking(move || file.set_permissions(perm)).await
+        spawn_blocking(move || file.set_permissions(perm)).await.unwrap_or_else(|e| Err(e))
     }
 }
 
@@ -977,7 +979,7 @@ mod tests {
                     drop(clone);
                     buf.len()
                 })
-            }).await;
+            }).await.unwrap();
             assert_eq!(len as u64, file.metadata().await.unwrap().len());
         });
     }

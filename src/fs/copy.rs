@@ -47,4 +47,5 @@ pub async fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<
             .context(|| format!("could not copy `{}` to `{}`", from.display(), to.display()))
     })
     .await
+    .unwrap_or_else(|e| Err(e))
 }
