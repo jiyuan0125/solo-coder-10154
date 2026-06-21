@@ -95,6 +95,8 @@ fn checked_mul_duration(interval: Duration, n: u64) -> Option<Duration> {
     part_high.checked_add(part_low)
 }
 
+const FALLBACK_INTERVAL: Duration = Duration::from_secs(3600);
+
 #[inline]
 fn next_deadline(start: Instant, interval: Duration, n: u64) -> Instant {
     if let Some(multiplied) = checked_mul_duration(interval, n) {
@@ -102,7 +104,10 @@ fn next_deadline(start: Instant, interval: Duration, n: u64) -> Instant {
             return deadline;
         }
     }
-    Instant::now() + Duration::from_secs(86400 * 365 * 100)
+    if let Some(deadline) = Instant::now().checked_add(interval) {
+        return deadline;
+    }
+    Instant::now().checked_add(FALLBACK_INTERVAL).unwrap_or(Instant::now())
 }
 
 impl Stream for Interval {

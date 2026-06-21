@@ -8,7 +8,7 @@ async fn print_name() {
 
 fn main() {
     task::block_on(async {
-        task::Builder::new()
+        let _ = task::Builder::new()
             .name("my-task".to_string())
             .spawn(print_name())
             .unwrap()

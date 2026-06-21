@@ -188,7 +188,7 @@ fn writer_and_readers() {
     task::block_on(async move {
         // Wait for readers to pass their asserts.
         for r in readers {
-            r.await;
+            let _ = r.await;
         }
 
         // Wait for writer to finish.
