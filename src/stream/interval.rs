@@ -46,12 +46,16 @@ use crate::utils::{timer_at, Timer};
 pub fn interval(dur: Duration) -> Interval {
     let start = Instant::now();
     let tick_count = 0u64;
-    let deadline = next_deadline(start, dur, tick_count + 1);
+    let deadline = match next_deadline(start, dur, tick_count + 1) {
+        Some(d) => d,
+        None => Instant::now(),
+    };
     Interval {
         delay: timer_at(deadline),
         interval: dur,
         start,
         tick_count,
+        exhausted: false,
     }
 }
 
@@ -69,6 +73,7 @@ pub struct Interval {
     interval: Duration,
     start: Instant,
     tick_count: u64,
+    exhausted: bool,
 }
 
 #[inline]
@@ -95,19 +100,10 @@ fn checked_mul_duration(interval: Duration, n: u64) -> Option<Duration> {
     part_high.checked_add(part_low)
 }
 
-const FALLBACK_INTERVAL: Duration = Duration::from_secs(3600);
-
 #[inline]
-fn next_deadline(start: Instant, interval: Duration, n: u64) -> Instant {
-    if let Some(multiplied) = checked_mul_duration(interval, n) {
-        if let Some(deadline) = start.checked_add(multiplied) {
-            return deadline;
-        }
-    }
-    if let Some(deadline) = Instant::now().checked_add(interval) {
-        return deadline;
-    }
-    Instant::now().checked_add(FALLBACK_INTERVAL).unwrap_or(Instant::now())
+fn next_deadline(start: Instant, interval: Duration, n: u64) -> Option<Instant> {
+    let multiplied = checked_mul_duration(interval, n)?;
+    start.checked_add(multiplied)
 }
 
 impl Stream for Interval {
@@ -117,9 +113,19 @@ impl Stream for Interval {
         if Pin::new(&mut self.delay).poll(cx).is_pending() {
             return Poll::Pending;
         }
+        if self.exhausted {
+            return Poll::Ready(None);
+        }
         self.tick_count += 1;
-        let deadline = next_deadline(self.start, self.interval, self.tick_count + 1);
-        let _ = std::mem::replace(&mut self.delay, timer_at(deadline));
+        match next_deadline(self.start, self.interval, self.tick_count + 1) {
+            Some(deadline) => {
+                let _ = std::mem::replace(&mut self.delay, timer_at(deadline));
+            }
+            None => {
+                self.exhausted = true;
+                let _ = std::mem::replace(&mut self.delay, timer_at(Instant::now()));
+            }
+        }
         Poll::Ready(Some(()))
     }
 }
