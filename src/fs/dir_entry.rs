@@ -87,7 +87,7 @@ impl DirEntry {
     /// ```
     pub async fn metadata(&self) -> io::Result<Metadata> {
         let inner = self.0.clone();
-        spawn_blocking(move || inner.metadata()).await
+        spawn_blocking(move || inner.metadata()).await?
     }
 
     /// Reads the file type for this entry.
@@ -125,7 +125,7 @@ impl DirEntry {
     /// ```
     pub async fn file_type(&self) -> io::Result<FileType> {
         let inner = self.0.clone();
-        spawn_blocking(move || inner.file_type()).await
+        spawn_blocking(move || inner.file_type()).await?
     }
 
     /// Returns the bare name of this entry without the leading path.

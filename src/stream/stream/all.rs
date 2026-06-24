@@ -33,21 +33,19 @@ where
     type Output = bool;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let next = futures_core::ready!(Pin::new(&mut *self.stream).poll_next(cx));
-
-        match next {
-            Some(v) => {
-                let result = (&mut self.f)(v);
-
-                if result {
-                    // don't forget to wake this task again to pull the next item from stream
-                    cx.waker().wake_by_ref();
-                    Poll::Pending
-                } else {
-                    Poll::Ready(false)
+        loop {
+            let next = futures_core::ready!(Pin::new(&mut *self.stream).poll_next(cx));
+            match next {
+                Some(v) => {
+                    let result = (&mut self.f)(v);
+                    if result {
+                        continue;
+                    } else {
+                        return Poll::Ready(false);
+                    }
                 }
+                None => return Poll::Ready(true),
             }
-            None => Poll::Ready(true),
         }
     }
 }

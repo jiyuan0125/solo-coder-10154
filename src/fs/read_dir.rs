@@ -50,7 +50,7 @@ pub async fn read_dir<P: AsRef<Path>>(path: P) -> io::Result<ReadDir> {
         std::fs::read_dir(&path)
             .context(|| format!("could not read directory `{}`", path.display()))
     })
-    .await
+    .await?
     .map(ReadDir::new)
 }
 
@@ -102,7 +102,7 @@ impl Stream for ReadDir {
                 }
                 // Poll the asynchronous operation the file is currently blocked on.
                 State::Busy(task) => {
-                    let (inner, opt) = futures_core::ready!(Pin::new(task).poll(cx));
+                    let (inner, opt) = futures_core::ready!(Pin::new(task).poll(cx))?;
                     self.0 = State::Idle(Some(inner));
                     return Poll::Ready(opt.map(|res| res.map(DirEntry::new)));
                 }

@@ -119,7 +119,7 @@ impl File {
         let file = spawn_blocking(move || {
             std::fs::File::open(&path).context(|| format!("could not open `{}`", path.display()))
         })
-        .await?;
+        .await??;
         Ok(File::new(file, true))
     }
 
@@ -157,7 +157,7 @@ impl File {
         let file = spawn_blocking(move || {
             std::fs::File::create(&path)
         })
-        .await?;
+        .await??;
         Ok(File::new(file, true))
     }
 
@@ -190,7 +190,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.sync_all()).await
+        spawn_blocking(move || state.file.sync_all()).await?
     }
 
     /// Synchronizes OS-internal buffered contents to disk.
@@ -226,7 +226,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.sync_data()).await
+        spawn_blocking(move || state.file.sync_data()).await?
     }
 
     /// Truncates or extends the file.
@@ -259,7 +259,7 @@ impl File {
         })
         .await?;
 
-        spawn_blocking(move || state.file.set_len(size)).await
+        spawn_blocking(move || state.file.set_len(size)).await?
     }
 
     /// Reads the file's metadata.
@@ -278,7 +278,7 @@ impl File {
     /// ```
     pub async fn metadata(&self) -> io::Result<Metadata> {
         let file = self.file.clone();
-        spawn_blocking(move || file.metadata()).await
+        spawn_blocking(move || file.metadata()).await?
     }
 
     /// Changes the permissions on the file.
@@ -307,7 +307,7 @@ impl File {
     /// ```
     pub async fn set_permissions(&self, perm: Permissions) -> io::Result<()> {
         let file = self.file.clone();
-        spawn_blocking(move || file.set_permissions(perm)).await
+        spawn_blocking(move || file.set_permissions(perm)).await?
     }
 }
 
@@ -977,7 +977,7 @@ mod tests {
                     drop(clone);
                     buf.len()
                 })
-            }).await;
+            }).await.unwrap();
             assert_eq!(len as u64, file.metadata().await.unwrap().len());
         });
     }

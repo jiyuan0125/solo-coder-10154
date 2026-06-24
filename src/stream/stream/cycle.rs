@@ -1,6 +1,5 @@
 use core::pin::Pin;
 
-use futures_core::ready;
 use pin_project_lite::pin_project;
 
 use crate::stream::Stream;
@@ -37,12 +36,15 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
 
-        match ready!(this.source.as_mut().poll_next(cx)) {
-            None => {
-                this.source.set(this.orig.clone());
-                this.source.poll_next(cx)
+        loop {
+            match this.source.as_mut().poll_next(cx) {
+                Poll::Ready(None) => {
+                    this.source.set(this.orig.clone());
+                    continue;
+                }
+                Poll::Ready(item) => return Poll::Ready(item),
+                Poll::Pending => return Poll::Pending,
             }
-            item => Poll::Ready(item),
         }
     }
 }

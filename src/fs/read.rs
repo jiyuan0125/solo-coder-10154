@@ -40,5 +40,5 @@ pub async fn read<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
     spawn_blocking(move || {
         std::fs::read(&path).context(|| format!("could not read file `{}`", path.display()))
     })
-    .await
+    .await?
 }

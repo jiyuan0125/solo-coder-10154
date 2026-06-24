@@ -34,5 +34,5 @@ pub async fn remove_dir<P: AsRef<Path>>(path: P) -> io::Result<()> {
         std::fs::remove_dir(&path)
             .context(|| format!("could not remove directory `{}`", path.display()))
     })
-    .await
+    .await?
 }

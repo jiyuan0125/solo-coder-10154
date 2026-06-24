@@ -42,5 +42,5 @@ pub async fn hard_link<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Re
             )
         })
     })
-    .await
+    .await?
 }

@@ -214,7 +214,7 @@ fn len() {
             assert!(len <= CAP);
         }
 
-        child.await;
+        child.await.unwrap();
 
         assert_eq!(s.len(), 0);
         assert_eq!(r.len(), 0);
@@ -234,7 +234,7 @@ fn disconnect_wakes_receiver() {
         task::sleep(ms(1000)).await;
         drop(s);
 
-        child.await;
+        child.await.unwrap();
     })
 }
 
@@ -258,7 +258,7 @@ fn spsc() {
         }
         drop(s);
 
-        child.await;
+        child.await.unwrap();
     })
 }
 
@@ -296,7 +296,7 @@ fn mpmc() {
         }
 
         for t in tasks {
-            t.await;
+            t.await.unwrap();
         }
 
         for c in v.iter() {
@@ -317,8 +317,8 @@ fn oneshot() {
             let c1 = spawn(async move { r.recv().await.unwrap() });
             let c2 = spawn(async move { s.send(0).await.unwrap() });
 
-            c1.await;
-            c2.await;
+            c1.await.unwrap();
+            c2.await.unwrap();
         }
     })
 }
@@ -361,7 +361,7 @@ fn drops() {
                 s.send(DropCounter).await.unwrap();
             }
 
-            child.await;
+            child.await.unwrap();
 
             for _ in 0..additional {
                 s.send(DropCounter).await.unwrap();

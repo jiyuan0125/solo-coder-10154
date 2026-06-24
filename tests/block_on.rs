@@ -24,7 +24,7 @@ fn nested_block_on_local() {
 
     let x = block_on(async {
         let a = block_on(async { block_on(async { ready(3).await }) });
-        let b = spawn_local(async { block_on(async { ready(2).await }) }).await;
+        let b = spawn_local(async { block_on(async { ready(2).await }) }).await.unwrap();
         let c = block_on(async { block_on(async { ready(1).await }) });
         a + b + c
     });
@@ -33,7 +33,7 @@ fn nested_block_on_local() {
 
     let y = block_on(async {
         let a = block_on(async { block_on(async { ready(3).await }) });
-        let b = spawn_local(async { block_on(async { ready(2).await }) }).await;
+        let b = spawn_local(async { block_on(async { ready(2).await }) }).await.unwrap();
         let c = block_on(async { block_on(async { ready(1).await }) });
         a + b + c
     });

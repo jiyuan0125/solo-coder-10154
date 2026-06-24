@@ -38,7 +38,7 @@ fn merging_delayed_streams_work() {
         task::sleep(std::time::Duration::from_millis(500)).await;
         sender.send(92).await.unwrap();
         drop(sender);
-        let xs = t.await;
+        let xs = t.await.unwrap();
         assert_eq!(xs, vec![92])
     });
 
@@ -57,7 +57,7 @@ fn merging_delayed_streams_work() {
         task::sleep(std::time::Duration::from_millis(500)).await;
         sender.send(92).await.unwrap();
         drop(sender);
-        let xs = t.await;
+        let xs = t.await.unwrap();
         assert_eq!(xs, vec![92])
     });
 }

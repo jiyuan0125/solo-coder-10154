@@ -32,19 +32,19 @@ where
     type Output = Option<usize>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let next = futures_core::ready!(Pin::new(&mut self.stream).poll_next(cx));
-
-        match next {
-            Some(v) => {
-                if (&mut self.predicate)(v) {
-                    Poll::Ready(Some(self.index))
-                } else {
-                    cx.waker().wake_by_ref();
-                    self.index += 1;
-                    Poll::Pending
+        loop {
+            let next = futures_core::ready!(Pin::new(&mut self.stream).poll_next(cx));
+            match next {
+                Some(v) => {
+                    if (&mut self.predicate)(v) {
+                        return Poll::Ready(Some(self.index));
+                    } else {
+                        self.index += 1;
+                        continue;
+                    }
                 }
+                None => return Poll::Ready(None),
             }
-            None => Poll::Ready(None),
         }
     }
 }

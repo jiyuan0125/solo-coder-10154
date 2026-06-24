@@ -42,7 +42,7 @@ pin_project! {
         #[pin]
         future: F,
         #[pin]
-        delay: Timer,
+        delay: Option<Timer>,
     }
 }
 
@@ -51,7 +51,7 @@ impl<F> TimeoutFuture<F> {
     pub(super) fn new(future: F, dur: Duration) -> TimeoutFuture<F> {
         TimeoutFuture {
             future,
-            delay: timer_after(dur),
+            delay: Some(timer_after(dur)),
         }
     }
 }
@@ -60,13 +60,24 @@ impl<F: Future> Future for TimeoutFuture<F> {
     type Output = Result<F::Output, TimeoutError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
+        let mut this = self.project();
         match this.future.poll(cx) {
-            Poll::Ready(v) => Poll::Ready(Ok(v)),
-            Poll::Pending => match this.delay.poll(cx) {
-                Poll::Ready(_) => Poll::Ready(Err(TimeoutError { _private: () })),
-                Poll::Pending => Poll::Pending,
-            },
+            Poll::Ready(v) => {
+                this.delay.set(None);
+                Poll::Ready(Ok(v))
+            }
+            Poll::Pending => {
+                let delay_ready = match this.delay.as_mut().as_pin_mut() {
+                    Some(d) => d.poll(cx).is_ready(),
+                    None => false,
+                };
+                if delay_ready {
+                    this.delay.set(None);
+                    Poll::Ready(Err(TimeoutError { _private: () }))
+                } else {
+                    Poll::Pending
+                }
+            }
         }
     }
 }

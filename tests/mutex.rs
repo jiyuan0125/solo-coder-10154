@@ -73,7 +73,7 @@ fn contention() {
         }
 
         for handle in handles.into_iter() {
-            handle.await;
+            handle.await.unwrap();
         }
 
         dbg!("wait");

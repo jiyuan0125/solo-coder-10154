@@ -37,7 +37,7 @@ where
     F: Future<Output = io::Result<T>>,
 {
     Timeout {
-        timeout: timer_after(dur),
+        timeout: Some(timer_after(dur)),
         future: f,
     }
     .await
@@ -53,7 +53,7 @@ pin_project! {
         #[pin]
         future: F,
         #[pin]
-        timeout: Timer,
+        timeout: Option<Timer>,
     }
 }
 
@@ -64,13 +64,22 @@ where
     type Output = io::Result<T>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
+        let mut this = self.project();
         match this.future.poll(cx) {
             Poll::Pending => {}
-            other => return other,
+            other => {
+                this.timeout.set(None);
+                return other;
+            }
         }
 
-        if this.timeout.poll(cx).is_ready() {
+        let timeout_ready = match this.timeout.as_mut().as_pin_mut() {
+            Some(t) => t.poll(cx).is_ready(),
+            None => false,
+        };
+
+        if timeout_ready {
+            this.timeout.set(None);
             let err = Err(io::Error::new(io::ErrorKind::TimedOut, "future timed out"));
             Poll::Ready(err)
         } else {

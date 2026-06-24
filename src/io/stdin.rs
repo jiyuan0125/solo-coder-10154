@@ -138,7 +138,7 @@ impl Stdin {
                         }
                     }
                     // Poll the asynchronous operation the stdin is currently blocked on.
-                    State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx)),
+                    State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx))?,
                 }
             }
         })
@@ -192,7 +192,7 @@ impl Read for Stdin {
                     }
                 }
                 // Poll the asynchronous operation the stdin is currently blocked on.
-                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx)),
+                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx))?,
             }
         }
     }

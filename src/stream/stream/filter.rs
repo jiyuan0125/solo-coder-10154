@@ -38,16 +38,14 @@ where
     type Item = S::Item;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.project();
-        let next = futures_core::ready!(this.stream.poll_next(cx));
-
-        match next {
-            Some(v) if (this.predicate)(&v) => Poll::Ready(Some(v)),
-            Some(_) => {
-                cx.waker().wake_by_ref();
-                Poll::Pending
+        let mut this = self.project();
+        loop {
+            let next = futures_core::ready!(this.stream.as_mut().poll_next(cx));
+            match next {
+                Some(v) if (this.predicate)(&v) => return Poll::Ready(Some(v)),
+                Some(_) => continue,
+                None => return Poll::Ready(None),
             }
-            None => Poll::Ready(None),
         }
     }
 }

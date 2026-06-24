@@ -1,6 +1,7 @@
 use std::future::Future;
 
-use crate::task::{Builder, JoinHandle};
+use crate::io;
+use crate::task::{Builder, JoinHandle, Task};
 
 /// Spawns a task.
 ///
@@ -19,7 +20,7 @@ use crate::task::{Builder, JoinHandle};
 ///     1 + 2
 /// });
 ///
-/// assert_eq!(handle.await, 3);
+/// assert_eq!(handle.await.unwrap(), 3);
 /// #
 /// # })
 /// ```
@@ -28,5 +29,16 @@ where
     F: Future<Output = T> + Send + 'static,
     T: Send + 'static,
 {
-    Builder::new().spawn(future).expect("cannot spawn task")
+    match Builder::new().spawn(future) {
+        Ok(handle) => handle,
+        Err(e) => {
+            let task = Task::new(None);
+            let err = io::Error::new(spawn_error_kind(), e);
+            JoinHandle::failed(err, task)
+        }
+    }
+}
+
+pub(crate) fn spawn_error_kind() -> io::ErrorKind {
+    io::ErrorKind::Other
 }

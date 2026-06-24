@@ -20,7 +20,7 @@ fn connect() -> io::Result<()> {
         let t = task::spawn(async move { listener.accept().await });
 
         let stream2 = TcpStream::connect(&addr).await?;
-        let stream1 = t.await?.0;
+        let stream1 = t.await??.0;
 
         assert_eq!(stream1.peer_addr()?, stream2.local_addr()?);
         assert_eq!(stream2.peer_addr()?, stream1.local_addr()?);

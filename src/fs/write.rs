@@ -38,5 +38,5 @@ pub async fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> io::
         std::fs::write(&path, contents)
             .context(|| format!("could not write to file `{}`", path.display()))
     })
-    .await
+    .await?
 }

@@ -10,6 +10,6 @@ fn main() {
             log::info!("Hello world!");
         });
 
-        handle.await;
+        handle.await.unwrap();
     })
 }

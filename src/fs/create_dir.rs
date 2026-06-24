@@ -39,5 +39,5 @@ pub async fn create_dir<P: AsRef<Path>>(path: P) -> io::Result<()> {
         std::fs::create_dir(&path)
             .context(|| format!("could not create directory `{}`", path.display()))
     })
-    .await
+    .await?
 }

@@ -36,7 +36,7 @@ fn drop_local() {
 
     // Wait for the task to finish and make sure its task-local has been dropped.
     task::block_on(async {
-        handle.await;
+        handle.await.unwrap();
         assert!(DROP_LOCAL.load(Ordering::SeqCst));
         drop(task);
     });

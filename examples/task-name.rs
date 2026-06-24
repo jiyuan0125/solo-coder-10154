@@ -12,6 +12,6 @@ fn main() {
             .name("my-task".to_string())
             .spawn(print_name())
             .unwrap()
-            .await;
+            .await.unwrap();
     })
 }

@@ -17,7 +17,7 @@ pin_project! {
         #[pin]
         stream: S,
         #[pin]
-        delay: Timer,
+        delay: Option<Timer>,
         duration: Duration,
     }
 }
@@ -26,7 +26,7 @@ impl<S: Stream> Timeout<S> {
     pub(crate) fn new(stream: S, dur: Duration) -> Self {
         let delay = timer_after(dur);
 
-        Self { stream, delay, duration: dur }
+        Self { stream, delay: Some(delay), duration: dur }
     }
 }
 
@@ -36,18 +36,28 @@ impl<S: Stream> Stream for Timeout<S> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
 
-        let r = match this.stream.poll_next(cx) {
-            Poll::Ready(Some(v)) => Poll::Ready(Some(Ok(v))),
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => match this.delay.as_mut().poll(cx) {
-                Poll::Ready(_) => Poll::Ready(Some(Err(TimeoutError { _private: () }))),
-                Poll::Pending => return Poll::Pending,
-            },
-        };
-
-        *this.delay.as_mut() = timer_after(*this.duration);
-
-        r
+        match this.stream.poll_next(cx) {
+            Poll::Ready(Some(v)) => {
+                this.delay.set(Some(timer_after(*this.duration)));
+                Poll::Ready(Some(Ok(v)))
+            }
+            Poll::Ready(None) => {
+                this.delay.set(None);
+                Poll::Ready(None)
+            }
+            Poll::Pending => {
+                let result = match this.delay.as_mut().as_pin_mut() {
+                    Some(delay) => delay.poll(cx),
+                    None => Poll::Pending,
+                };
+                if result.is_ready() {
+                    this.delay.set(Some(timer_after(*this.duration)));
+                    Poll::Ready(Some(Err(TimeoutError { _private: () })))
+                } else {
+                    Poll::Pending
+                }
+            }
+        }
     }
 }
 

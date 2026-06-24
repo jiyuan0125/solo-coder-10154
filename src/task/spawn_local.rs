@@ -1,6 +1,6 @@
 use std::future::Future;
 
-use crate::task::{Builder, JoinHandle};
+use crate::task::{Builder, JoinHandle, Task};
 
 /// Spawns a task onto the thread-local executor.
 ///
@@ -16,7 +16,7 @@ use crate::task::{Builder, JoinHandle};
 ///     1 + 2
 /// });
 ///
-/// assert_eq!(handle.await, 3);
+/// assert_eq!(handle.await.unwrap(), 3);
 /// #
 /// # })
 /// ```
@@ -27,5 +27,11 @@ where
     F: Future<Output = T> + 'static,
     T: 'static,
 {
-    Builder::new().local(future).expect("cannot spawn task")
+    match Builder::new().local(future) {
+        Ok(handle) => handle,
+        Err(e) => {
+            let task = Task::new(None);
+            JoinHandle::failed(e, task)
+        }
+    }
 }

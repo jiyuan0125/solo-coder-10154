@@ -44,5 +44,5 @@ pub async fn rename<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Resul
             )
         })
     })
-    .await
+    .await?
 }

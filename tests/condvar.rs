@@ -95,7 +95,7 @@ fn notify_all() {
         }
 
         for t in tasks {
-            t.await;
+            t.await.unwrap();
         }
         let count = m.lock().await;
         assert_eq!(11, *count);

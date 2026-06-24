@@ -133,7 +133,7 @@ impl Write for Stderr {
                     }
                 }
                 // Poll the asynchronous operation the stderr is currently blocked on.
-                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx)),
+                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx))?,
             }
         }
     }
@@ -162,7 +162,7 @@ impl Write for Stderr {
                     }
                 }
                 // Poll the asynchronous operation the stderr is currently blocked on.
-                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx)),
+                State::Busy(task) => *state = futures_core::ready!(Pin::new(task).poll(cx))?,
             }
         }
     }

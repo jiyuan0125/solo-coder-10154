@@ -35,7 +35,7 @@ async fn accept_loop(addr: impl ToSocketAddrs) -> Result<()> {
         spawn_and_log_error(connection_loop(broker_sender.clone(), stream));
     }
     drop(broker_sender);
-    broker.await;
+    let _ = broker.await;
     Ok(())
 }
 

@@ -96,7 +96,7 @@ impl<I: Iterator<Item = SocketAddr>> Future for ToSocketAddrsFuture<I> {
                 if poll.is_pending() {
                     *this = ToSocketAddrsFuture::Resolving(task);
                 }
-                poll
+                poll.map(|res| res?)
             }
             ToSocketAddrsFuture::Ready(res) => Poll::Ready(res),
             ToSocketAddrsFuture::Done => panic!("polled a completed future"),

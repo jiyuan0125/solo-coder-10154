@@ -285,7 +285,7 @@ impl OpenOptions {
         let path = path.as_ref().to_owned();
         let options = self.0.clone();
         async move {
-            let file = spawn_blocking(move || options.open(path)).await?;
+            let file = spawn_blocking(move || options.open(path)).await??;
             Ok(File::new(file, true))
         }
     }

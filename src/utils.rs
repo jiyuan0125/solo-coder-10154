@@ -18,40 +18,6 @@ pub fn abort_on_panic<T>(f: impl FnOnce() -> T) -> T {
     t
 }
 
-/// Generates a random number in `0..n`.
-#[cfg(feature = "unstable")]
-pub fn random(n: u32) -> u32 {
-    use std::cell::Cell;
-    use std::num::Wrapping;
-
-    thread_local! {
-        static RNG: Cell<Wrapping<u32>> = {
-            // Take the address of a local value as seed.
-            let mut x = 0i32;
-            let r = &mut x;
-            let addr = r as *mut i32 as usize;
-            Cell::new(Wrapping(addr as u32))
-        }
-    }
-
-    RNG.with(|rng| {
-        // This is the 32-bit variant of Xorshift.
-        //
-        // Source: https://en.wikipedia.org/wiki/Xorshift
-        let mut x = rng.get();
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        rng.set(x);
-
-        // This is a fast alternative to `x % n`.
-        //
-        // Author: Daniel Lemire
-        // Source: https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
-        ((u64::from(x.0)).wrapping_mul(u64::from(n)) >> 32) as u32
-    })
-}
-
 /// Add additional context to errors
 #[cfg(feature = "std")]
 pub(crate) trait Context {
@@ -71,10 +37,16 @@ pub(crate) fn timer_after(dur: std::time::Duration) -> timer::Timer {
     Timer::after(dur)
 }
 
+#[cfg(feature = "unstable")]
+pub(crate) fn timer_at(instant: std::time::Instant) -> timer::Timer {
+    Timer::at(instant)
+}
+
 #[cfg(any(all(target_arch = "wasm32", feature = "default"),))]
 mod timer {
     use std::pin::Pin;
     use std::task::Poll;
+    use std::time::Instant;
 
     use gloo_timers::future::TimeoutFuture;
 
@@ -91,6 +63,16 @@ mod timer {
 
             Timer(TimeoutFuture::new(timeout_ms))
         }
+
+        pub(crate) fn at(instant: Instant) -> Self {
+            let now = Instant::now();
+            let dur = if instant > now {
+                instant - now
+            } else {
+                std::time::Duration::ZERO
+            };
+            Self::after(dur)
+        }
     }
 
     impl std::future::Future for Timer {
@@ -103,6 +85,11 @@ mod timer {
             }
         }
     }
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "unstable"))]
+pub(crate) fn timer_at(instant: std::time::Instant) -> timer::Timer {
+    Timer::at(instant)
 }
 
 #[cfg(any(feature = "unstable", feature = "default"))]
