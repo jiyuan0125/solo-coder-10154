@@ -1,6 +1,5 @@
 use std::future::Future;
 
-use crate::io;
 use crate::task::{Builder, JoinHandle, Task};
 
 /// Spawns a task.
@@ -33,12 +32,7 @@ where
         Ok(handle) => handle,
         Err(e) => {
             let task = Task::new(None);
-            let err = io::Error::new(spawn_error_kind(), e);
-            JoinHandle::failed(err, task)
+            JoinHandle::failed(e, task)
         }
     }
-}
-
-pub(crate) fn spawn_error_kind() -> io::ErrorKind {
-    io::ErrorKind::Other
 }
